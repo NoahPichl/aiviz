@@ -1,0 +1,13 @@
+{
+    "team_name": "Jurassic Plots",
+    "students": [
+        {
+            "student_id": "k12011672",
+            "first_name": "Noah",
+            "last_name": "Pichler",
+            "email": "k12011672@students.jku.at ",
+            "github_user": "NoahPichl"
+        },
+        // ...add a record for each student
+    ]
+}

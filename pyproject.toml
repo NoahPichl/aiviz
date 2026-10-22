@@ -1,14 +1,14 @@
 [project]
-name = "aiviz"
+name = "jurassic-plots"
 version = "0.1.0"
-description = "Add your description here"
+description = "Team to visualize the tirex-2 model outputs"
 readme = "README.md"
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "notebook>=7.6.3",
+    "pandas>=3.1.0",
+    "tirex-2[examples]>=0.3.1",
+]
 
-[project.scripts]
-aiviz = "aiviz:main"
-
-[build-system]
-requires = ["uv_build>=0.13.1,<0.14.0"]
-build-backend = "uv_build"
+[tool.ruff.lint]
+extend-select = ["I"]
