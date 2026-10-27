@@ -8,6 +8,13 @@
             "email": "k12011672@students.jku.at ",
             "github_user": "NoahPichl"
         },
+        {
+            "student_id": "k12209427",
+            "first_name": "Florian",
+            "last_name": "Ploder",
+            "email": "k12209427@students.jku.at ",
+            "github_user": "FlorianPlo"
+        },
         // ...add a record for each student
     ]
 }
