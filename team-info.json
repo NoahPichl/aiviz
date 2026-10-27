@@ -15,6 +15,13 @@
             "email": "k12209427@students.jku.at ",
             "github_user": "FlorianPlo"
         },
+        {
+            "student_id": "k12213554",
+            "first_name": "Nicola-Anastasia",
+            "last_name": "Steopan",
+            "email": "k12213554@students.jku.at ",
+            "github_user": "qqqq26"
+        },
         // ...add a record for each student
     ]
 }
