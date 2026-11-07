@@ -5,11 +5,14 @@ description = "Team to visualize the tirex-2 model outputs"
 readme = "README.md"
 requires-python = "==3.12.*"
 dependencies = [
+    "anywidget>=0.11.0",
     "datasets",
     "gluonts",
+    "ipywidgets>=8.1.9",
     "notebook>=7.6.3",
     "pandas>=2.0.0,<3",
     "python-dotenv",
+    "scikit-learn>=1.9.1",
     "tirex-2[examples]>=0.3.1",
 ]
 

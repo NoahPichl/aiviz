@@ -42,3 +42,4 @@ uv run python TIME/experiments/tirex2_model.py \
 ```
 
 Results are saved to `output/results/TiRex2` by default.
+
