@@ -342,9 +342,14 @@ def build_series_cube(
         )
         frames.append(static.join(agg).reset_index())
         if verbose:
+            missing = int(df["unique_id"].isna().sum())
             matched = df["unique_id"].notna().mean()
+            # Do not round to 100%: a single unmatched series silently drops
+            # every feat_* value out of the scatter plots.
+            warn = f"  <-- {missing} window rows WITHOUT features" if missing else ""
             print(
-                f"{model} {dataset_id}/{term}: {len(df):>8} window rows, feature match {matched:.0%}"
+                f"{model} {dataset_id}/{term}: {len(df):>8} window rows, "
+                f"feature match {matched:.2%}{warn}"
             )
 
     cube = pd.concat(frames, ignore_index=True)
