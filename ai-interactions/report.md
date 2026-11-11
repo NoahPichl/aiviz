@@ -12,9 +12,8 @@ We accepted the suggestion to compare the performance based on median MASE, even
 
 We also accepted some of the analysis done by Gemini and it can be seen in our notebook some statements that claim more than the plots show.
 
-As for failures, LLMs cannot always distinguish between the lines or blocks and it leads to false reports. For example: this picture was used to analyze the results and the model is insisting that the Global_Price dataset has a feat_seasonal_strength of almost 0.0. I corrected
-
-it by saying: “But global_price has a high feat_trend_strength and for x and e entropy the values are around 0.4-0.6 and it is the 3rd in worst performing” and the response was “Looking closely at the Global_Price row in the heatmap (plot_feature_profile), notice that while feat_trend_strength is bright yellow/green, feat_seasonal_strength is dark purple(~0.0).”
+As for failures, LLMs cannot always distinguish between the lines or blocks and it leads to false reports. For example: this picture was used to analyze the results and the model is insisting that the Global_Price dataset has a feat_seasonal_strength of almost 0.0. I corrected it by saying: “But global_price has a high feat_trend_strength and for x and e entropy the values are around 0.4-0.6 and it is the 3rd in worst performing” and the response was “Looking closely at the Global_Price row in the heatmap (plot_feature_profile), notice that while feat_trend_strength is bright yellow/green, feat_seasonal_strength is dark purple(~0.0).” 
+![plot](image.png)
 
 Another failure found while analyzing was for the feature profile within the short term series. We asked the LLM to analyze this heatmap 
 ![plot](feature_profile.png)
