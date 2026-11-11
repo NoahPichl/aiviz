@@ -14,16 +14,15 @@ We also accepted some of the analysis done by Gemini and it can be seen in our n
 
 As for failures, LLMs cannot always distinguish between the lines or blocks and it leads to false reports. For example: this picture was used to analyze the results and the model is insisting that the Global_Price dataset has a feat_seasonal_strength of almost 0.0. I corrected
 
-it by saying: “But global_price has a high feat_trend_strength and for x and e entropy the values are around 0.4-0.6 and it is the 3rd in worst performing” and the response was “Looking closely at the Global_Price row in the heatmap (plot_feature_profile), notice
+it by saying: “But global_price has a high feat_trend_strength and for x and e entropy the values are around 0.4-0.6 and it is the 3rd in worst performing” and the response was “Looking closely at the Global_Price row in the heatmap (plot_feature_profile), notice that while feat_trend_strength is bright yellow/green, feat_seasonal_strength is dark purple(~0.0).”
 
+Another failure found while analyzing was for the feature profile within the short term series. We asked the LLM to analyze this heatmap 
+![plot](feature_profile.png)
 
-that while feat_trend_strength is bright yellow/green, feat_seasonal_strength is dark purple(
+and the response was: R “However, the 31 series comprising the noise group (Cluster -1) expose the model's primary short-term vulnerability: characterized by extreme ARCH effects and trend strength, this group suffers a median MASE of 1. 10 , failing to beat the naive baseline while exhibiting explosive uncertainty growth. “
 
-~0.0).”
+Q: what is this? (this was a reply to the “extreme ARCH effects”)
 
-Another failure found while analyzing was for the feature profile within the short term series. We asked the LLM to analyze this heatmap and the response was: R “However, the 31 series comprising the noise group (Cluster -1) expose the model's primary short-term vulnerability: characterized by extreme ARCH effects and trend strength, this group suffers a median MASE of 1. 10 , failing to beat the naive baseline while exhibiting explosive uncertainty growth. “
-
-## Q: what is this? (this was a reply to the “extreme ARCH effects”)
 
 R: “When looking at the cluster profile heatmap for Cluster -1 (the short-term noise group), the e_arch_lm feature has a z-score of +2.3. This means the time series in that cluster have an ARCH statistic that is 2.3 standard deviations above the global average. Your feature extractor explicitly flagged them as having high conditional heteroskedasticity (volatility
 
