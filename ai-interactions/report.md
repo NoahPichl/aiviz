@@ -1,4 +1,4 @@
-The prompts can be found in file: prompts.txt
+The prompts can be found in file: prompts.md
 
 At the beginning, the prompt (1) was used, where the problem was introduced as it is and the LLM was asked to help with brainstorming.
 
