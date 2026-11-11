@@ -1,6 +1,6 @@
 # AI Reflection Midpoint
 
 Tobias Barcik K12337466
-<first_name> <last_name> <student_id>
+<Nicola-Anastasia> <Steopan> <K12213554>
 
 Reflect on the experience with AI
