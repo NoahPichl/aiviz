@@ -428,3 +428,196 @@ def plot_forecast_fan(q, levels, series_idx=0, window_idx=0, variate_idx=0, titl
     ax.set_title(f"{title}  series {series_idx} | window {window_idx} | variate {variate_idx}")
     ax.legend()
     return _done(fig)
+
+    
+def _cluster_colors(labels):
+    uniq = sorted(set(labels))
+    pal = sns.color_palette("tab10", max(1, len([u for u in uniq if u >= 0])))
+    cmap, i = {}, 0
+    for u in uniq:
+        if u < 0:
+            cmap[u] = (0.8, 0.8, 0.8)
+        else:
+            cmap[u] = pal[i % len(pal)]
+            i += 1
+    return cmap
+ 
+ 
+def plot_embedding_panels(df_emb, top_datasets=10):
+    """Six views of the SAME map. Position = input features only; colours = what the model did.
+    Read across panels: where the map is red in 'MASE', what is it in 'dataset', 'density', 'flat-lining'?"""
+    from matplotlib.colors import TwoSlopeNorm
+    fig, axes = plt.subplots(2, 3, figsize=(18, 11))
+    x, y = df_emb.emb_x, df_emb.emb_y
+    kw = dict(s=7, alpha=0.75, linewidths=0)
+ 
+    ax = axes[0, 0]                                      # dataset
+    top = df_emb.dataset.value_counts().head(top_datasets).index
+    ax.scatter(x, y, c="lightgrey", **kw)
+    pal = sns.color_palette("tab10", len(top))
+    for c, ds in zip(pal, top):
+        m = df_emb.dataset == ds
+        ax.scatter(x[m], y[m], color=c, label=ds, **kw)
+    ax.legend(fontsize=7, markerscale=2, loc="best"); ax.set_title(f"dataset (top {len(top)} by size, rest grey)")
+ 
+    ax = axes[0, 1]                                      # error, centred on the naive baseline
+    v = np.log10(df_emb.median_MASE.clip(0.1, 10))
+    sc = ax.scatter(x, y, c=v, cmap="RdBu_r", norm=TwoSlopeNorm(0, -1, 1), **kw)
+    cb = fig.colorbar(sc, ax=ax, label="median MASE (log scale; white = naive baseline)")
+    cb.set_ticks([-1, -0.5, 0, 0.5, 1]); cb.set_ticklabels(["0.1", "0.3", "1", "3", "10"]); ax.set_title("error")
+ 
+    ax = axes[0, 2]                                      # clusters
+    if "cluster" in df_emb:
+        cm = _cluster_colors(df_emb.cluster)
+        ax.scatter(x, y, c=[cm[c] for c in df_emb.cluster], **kw)
+        for c, g in df_emb.groupby("cluster"):
+            if c >= 0:
+                ax.text(g.emb_x.median(), g.emb_y.median(), str(c), fontsize=13, weight="bold",
+                        bbox=dict(boxstyle="round", fc="white", alpha=0.7))
+        ax.set_title("clusters (grey = noise)")
+    else:
+        ax.axis("off")
+ 
+    ax = axes[1, 0]                                      # sparsity in input space
+    sc = ax.scatter(x, y, c=df_emb.density_dist, cmap="viridis", **kw)
+    fig.colorbar(sc, ax=ax, label="mean kNN distance in feature space"); ax.set_title("sparsity of the input space")
+ 
+    ax = axes[1, 1]                                      # flat-lining
+    sc = ax.scatter(x, y, c=df_emb.flat_share, cmap="magma_r", vmin=0, vmax=1, **kw)
+    fig.colorbar(sc, ax=ax, label="share of flat forecasts"); ax.set_title("flat-lining")
+ 
+    ax = axes[1, 2]                                      # uncertainty growth
+    v = df_emb.width_growth.clip(1, 4)
+    sc = ax.scatter(x, y, c=v, cmap="viridis", **kw)
+    fig.colorbar(sc, ax=ax, label="width growth (last/first quarter, clipped)"); ax.set_title("uncertainty growth")
+    for a in axes.ravel():
+        a.set_xticks([]); a.set_yticks([])
+    fig.suptitle("Series map from input features only (UMAP/PCA) -- colours show model behaviour", y=1.0)
+    return _done(fig)
+ 
+ 
+def plot_cluster_profile(profile, features=FEATURES, outcomes=("median_MASE", "share_worse_than_naive",
+                                                               "flat_share", "width_growth", "amp_rel")):
+    """Per cluster: left = what the inputs look like (mean z-score of each feature),
+    middle = what the model does (median outcomes, each column scaled 0-1 only for colour),
+    right = who is in it (size, dominant dataset)."""
+    zc = [c for c in profile.columns if c.startswith("z_")]
+    ylabels = [f"c{c} (n={int(r.n)})  {r.top_datasets.split(',')[0]}" for c, r in profile.iterrows()]
+    fig, (a1, a2) = plt.subplots(1, 2, figsize=(15, max(4, 0.55 * len(profile) + 2)),
+                                 gridspec_kw={"width_ratios": [1.3, 1]})
+    sns.heatmap(profile[zc].rename(columns=lambda c: c[2:]), cmap="coolwarm", center=0, annot=True, fmt=".1f",
+                annot_kws={"size": 8}, yticklabels=ylabels, cbar_kws={"label": "mean z-score"}, ax=a1)
+    a1.set_title("Inputs: feature profile"); a1.set_ylabel("")
+    oc = [o for o in outcomes if o in profile.columns]
+    vals = profile[oc]
+    scaled = (vals - vals.min()) / (vals.max() - vals.min() + 1e-12)
+    sns.heatmap(scaled, cmap="Reds", annot=vals.round(2), fmt="", annot_kws={"size": 8},
+                yticklabels=False, cbar=False, ax=a2)
+    a2.set_title("Model behaviour (median; colour scaled per column)")
+    return _done(fig)
+ 
+ 
+def plot_cluster_distributions(df_emb, outcome="median_MASE", log=True):
+    """Distribution of one outcome per cluster (+ n), including the noise group -1."""
+    d = df_emb.dropna(subset=[outcome])
+    order = sorted(d.cluster.unique())
+    fig, ax = plt.subplots(figsize=(max(7, 0.9 * len(order)), 4.5))
+    sns.boxplot(data=d, x="cluster", y=outcome, order=order, showfliers=False, color="#8ecae6", ax=ax)
+    if log:
+        ax.set_yscale("log")
+    if outcome == "median_MASE":
+        ax.axhline(1, color="k", ls="--", lw=1)
+    ax.set_xticks(range(len(order)))
+    ax.set_xticklabels([f"{c}\n(n={int((d.cluster == c).sum())})" for c in order], fontsize=8)
+    ax.set_title(f"{outcome} per cluster")
+    return _done(fig)
+ 
+ 
+def plot_distinguishing(dist_df, cluster, top=12):
+    """Which features/outcomes separate this cluster from all others? Bars show AUC - 0.5
+    (right = higher inside the cluster, left = lower). Inputs in blue, outputs in orange."""
+    d = dist_df.head(top).iloc[::-1]
+    fig, ax = plt.subplots(figsize=(7, 0.38 * len(d) + 1.5))
+    ax.barh(d.variable, d.AUC - 0.5, color=["#e76f51" if k == "outcome" else "#4c78a8" for k in d.kind], left=0)
+    ax.axvline(0, color="k", lw=1)
+    ax.set_xlim(-0.5, 0.5)
+    ax.set_xlabel("AUC - 0.5  (cluster vs rest)")
+    ax.set_title(f"What distinguishes cluster {cluster}?")
+    return _done(fig)
+ 
+ 
+def plot_embedding_interactive(df_emb, color_options=("median_MASE", "flat_share", "width_growth", "density_dist",
+                                                      "amp_rel", "share_worse_than_naive")):
+    """Plotly scatter with a dropdown to switch the colouring and hover info (dataset, freq, series, cluster).
+    Needs `pip install plotly`. Returns a plotly Figure -> in a notebook just put it as the last line of a cell."""
+    import plotly.graph_objects as go
+    d = df_emb.copy()
+    opts = [c for c in color_options if c in d.columns]
+    hover = (d["dataset"].astype(str) + " | " + d["freq"].astype(str) + " | series " + d["series_idx"].astype(str)
+             + " | variate " + d["variate_idx"].astype(str)
+             + ("<br>cluster " + d["cluster"].astype(str) if "cluster" in d else "")
+             + "<br>median MASE " + d["median_MASE"].round(2).astype(str)
+             + "<br>n windows " + d["n_windows"].astype(str))
+    def vals(c):
+        v = d[c]
+        return np.log10(v.clip(0.1, 10)) if c == "median_MASE" else v
+    fig = go.Figure(go.Scattergl(x=d.emb_x, y=d.emb_y, mode="markers", text=hover, hoverinfo="text",
+                                 marker=dict(size=5, opacity=0.75, color=vals(opts[0]), colorscale="Viridis",
+                                             colorbar=dict(title=opts[0]), showscale=True)))
+    fig.update_layout(
+        updatemenus=[dict(buttons=[dict(label=c, method="restyle",
+                                        args=[{"marker.color": [vals(c).tolist()], "marker.colorbar.title.text": c}])
+                                   for c in opts], x=0.0, y=1.12, xanchor="left")],
+        width=900, height=700, title="Series map (position = input features only)",
+        xaxis=dict(showticklabels=False), yaxis=dict(showticklabels=False))
+    return fig
+
+def plot_freq_heatmap(df_analysis):
+    """Heatmap of median MASE by dataset and frequency for multi-frequency datasets.
+    Evaluates how often prediction error scales monotonically with frequency."""
+    from matplotlib.colors import TwoSlopeNorm
+    
+    # 1. Isolate multi-frequency datasets
+    multi = df_analysis.groupby("dataset", observed=True)["freq"].nunique()
+    multi = multi[multi > 1].index
+    
+    if len(multi) == 0:
+        print("No multi-frequency datasets found.")
+        return None
+        
+    hm = (df_analysis[df_analysis.dataset.isin(multi)]
+          .groupby(["dataset", "freq"], observed=True)["MASE"].median().unstack("freq"))
+    
+    # 2. Sort columns dynamically using plotss.py's existing frequency sort key
+    cols = sorted(hm.columns, key=_freq_sort_key)
+    hm = hm[cols]
+    
+    # 3. Setup Plot
+    fig, ax = plt.subplots(figsize=(max(5, 1 + 0.9 * len(cols)), max(4, 0.35 * len(hm) + 1.5)))
+    
+    # Ensure vmin and vmax wrap around the center of 1.0 to prevent TwoSlopeNorm crashes
+    vmin = min(0.9, hm.min().min())
+    vmax = max(1.1, hm.max().max())
+    
+    im = ax.imshow(hm.values, cmap="RdBu_r", norm=TwoSlopeNorm(vmin=vmin, vcenter=1.0, vmax=vmax), aspect="auto")
+    
+    ax.set_xticks(range(len(cols)))
+    ax.set_xticklabels(cols)
+    ax.set_yticks(range(len(hm)))
+    ax.set_yticklabels(hm.index, fontsize=8)
+    
+    # 4. Annotate cells
+    for i in range(hm.shape[0]):
+        for j in range(hm.shape[1]):
+            v = hm.values[i, j]
+            if not np.isnan(v): 
+                ax.text(j, i, f"{v:.2f}", ha="center", va="center", fontsize=7)
+                
+    fig.colorbar(im, ax=ax, label="median MASE (white = naive)")
+    ax.set_title("Median MASE by dataset and sampling frequency (fine -> coarse)")
+    
+    # 5. Output monotonic statistics to console
+    mono = hm.apply(lambda r: r.dropna().is_monotonic_increasing, axis=1)
+    print(f"{mono.mean():.0%} of multi-frequency datasets have MASE increasing monotonically with coarser sampling")
+    
+    return _done(fig)
