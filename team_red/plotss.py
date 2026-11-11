@@ -1,4 +1,4 @@
-"""plots.py -- every function takes DataFrames and returns a matplotlib Figure (no globals)."""
+"""plotss.py -- every function takes DataFrames and returns a matplotlib Figure (no globals)."""
 import re
 import numpy as np
 import pandas as pd
